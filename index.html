@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SmartPark AI — Intelligent Parking Allocation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#0f1e3d;
+    --navy-2:#162a55;
+    --navy-3:#1e3670;
+    --blue:#2d7ff9;
+    --blue-soft:#e8f1ff;
+    --green:#16a34a;
+    --green-soft:#e6f7ec;
+    --red:#dc2626;
+    --red-soft:#fde8e8;
+    --orange:#f59e0b;
+    --orange-soft:#fff3dc;
+    --bg:#f5f7fb;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    overflow-x:hidden;
+  }
+  .app{display:flex;min-height:100vh}
+  /* Sidebar */
+  .sidebar{
+    width:260px;
+    background:linear-gradient(180deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    position:fixed;
+    top:0;left:0;bottom:0;
+    display:flex;flex-direction:column;
+    z-index:1000;
+    transition:transform .3s ease;
+  }
+  .brand{
+    padding:22px 20px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex;align-items:center;gap:12px;
+  }
+  .brand-logo{
+    width:42px;height:42px;border-radius:10px;
+    background:linear-gradient(135deg,var(--blue),var(--green));
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+  }
+  .brand-text h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.3px}
+  .brand-text small{color:#9fb3d8;font-size:11px}
+  .nav-menu{flex:1;padding:14px 10px;overflow-y:auto}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 14px;margin:3px 0;
+    border-radius:10px;cursor:pointer;
+    color:#cfd8ec;font-size:14px;font-weight:500;
+    transition:all .2s;
+  }
+  .nav-item i{font-size:17px}
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .nav-item.active{
+    background:linear-gradient(90deg,var(--blue),#4f93ff);
+    color:#fff;box-shadow:0 4px 14px rgba(45,127,249,.35);
+  }
+  .sidebar-footer{
+    padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);
+    font-size:12px;color:#9fb3d8;
+  }
+  /* Main */
+  .main{
+    margin-left:260px;flex:1;min-width:0;
+    display:flex;flex-direction:column;
+  }
+  .topbar{
+    background:#fff;border-bottom:1px solid var(--border);
+    padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:100;
+  }
+  .topbar h2{margin:0;font-size:20px;font-weight:700}
+  .topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .topbar-right{display:flex;align-items:center;gap:14px}
+  .live-dot{
+    width:9px;height:9px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 4px rgba(22,163,74,.18);animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.4)}70%{box-shadow:0 0 0 10px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+  .content{padding:26px;flex:1}
+  .page{display:none}
+  .page.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  /* Cards */
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;box-shadow:0 1px 3px rgba(15,30,61,.04);
+  }
+  .stat-card{padding:20px;display:flex;gap:14px;align-items:center}
+  .stat-icon{
+    width:52px;height:52px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+  }
+  .stat-icon.blue{background:var(--blue-soft);color:var(--blue)}
+  .stat-icon.green{background:var(--green-soft);color:var(--green)}
+  .stat-icon.red{background:var(--red-soft);color:var(--red)}
+  .stat-icon.orange{background:var(--orange-soft);color:var(--orange)}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .stat-value{font-size:26px;font-weight:700;margin-top:2px}
+  .stat-delta{font-size:12px;color:var(--muted);margin-top:2px}
+  .section-title{font-size:16px;font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+  .section-title i{color:var(--blue)}
+  /* Parking map */
+  .parking-wrap{
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    padding:22px;
+  }
+  .parking-grid{
+    display:grid;gap:6px;
+    grid-template-columns:repeat(12,1fr);
+    max-width:900px;margin:0 auto;
+  }
+  .cell{
+    aspect-ratio:1.3/1;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;color:#fff;
+    cursor:default;position:relative;
+    transition:transform .15s;
+  }
+  .cell.slot{cursor:pointer}
+  .cell.slot:hover{transform:scale(1.08);z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .cell.available{background:var(--green)}
+  .cell.occupied{background:var(--red)}
+  .cell.accessible{background:#7c3aed}
+  .cell.ev{background:var(--orange)}
+  .cell.path{background:#fbbf24 !important;box-shadow:0 0 0 2px #f59e0b}
+  .cell.allocated{background:var(--blue) !important;box-shadow:0 0 0 3px #1d4ed8}
+  .cell.wall{background:#1f2937}
+  .cell.walkway{background:#e5e7eb;color:#6b7280}
+  .cell.entrance{background:var(--blue)}
+  .cell.gate{background:var(--orange)}
+  .cell.door{background:#111827}
+  .cell .slot-label{font-size:9px;line-height:1}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px;font-size:12px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+  /* Tables */
+  .table-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .table-wrap table{margin:0}
+  .table-wrap thead{background:#f9fafb}
+  .table-wrap th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border)}
+  .table-wrap td{vertical-align:middle;font-size:14px}
+  .badge-soft{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-green{background:var(--green-soft);color:var(--green)}
+  .badge-red{background:var(--red-soft);color:var(--red)}
+  .badge-blue{background:var(--blue-soft);color:var(--blue)}
+  .badge-orange{background:var(--orange-soft);color:var(--orange)}
+  /* Forms */
+  .form-card{padding:24px}
+  .form-label{font-size:13px;font-weight:600;color:var(--text)}
+  .form-control,.form-select{border-radius:10px;border:1px solid var(--border);padding:10px 12px}
+  .form-control:focus,.form-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(45,127,249,.15)}
+  .btn-primary{background:var(--blue);border:none;border-radius:10px;padding:10px 20px;font-weight:600}
+  .btn-primary:hover{background:#1d6ae0}
+  .btn-success{background:var(--green);border:none;border-radius:10px;padding:10px 20px;font-weight:600}
+  .btn-outline-danger{border-radius:10px}
+  .btn-outline-secondary{border-radius:10px}
+  /* Result card */
+  .result-card{
+    background:linear-gradient(135deg,#f0f7ff,#e6f7ec);
+    border:1px solid #cfe3ff;border-radius:14px;padding:20px;
+  }
+  .result-card.fail{background:linear-gradient(135deg,#fde8e8,#fff3dc);border-color:#f5c6c6}
+  .result-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(0,0,0,.08);font-size:14px}
+  .result-row:last-child{border:none}
+  .result-row b{color:var(--text)}
+  .result-row span{color:var(--muted)}
+  /* Batch */
+  .batch-row{
+    display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:10px;
+    align-items:end;padding:10px;background:#f9fafb;border-radius:10px;margin-bottom:8px;
+  }
+  /* Notifications */
+  .toast-wrap{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px}
+  .toast-msg{
+    min-width:280px;padding:14px 18px;border-radius:10px;color:#fff;
+    box-shadow:0 8px 24px rgba(0,0,0,.15);font-size:14px;font-weight:500;
+    animation:slideIn .3s ease;
+  }
+  .toast-msg.success{background:var(--green)}
+  .toast-msg.error{background:var(--red)}
+  .toast-msg.info{background:var(--blue)}
+  .toast-msg.warn{background:var(--orange)}
+  @keyframes slideIn{from{transform:translateX(120%)}to{transform:none}}
+  /* About */
+  .about-section{padding:22px;border-bottom:1px solid var(--border)}
+  .about-section:last-child{border:none}
+  .about-section h4{font-weight:700;margin-bottom:10px;color:var(--navy)}
+  .workflow{
+    display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    padding:20px;background:#f9fafb;border-radius:12px;margin-top:10px;
+  }
+  .wf-step{
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    padding:12px 16px;font-weight:600;font-size:13px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .wf-step i{color:var(--blue)}
+  .wf-arrow{color:var(--muted);font-size:18px}
+  /* Insights */
+  .algo-card{padding:22px}
+  .formula{
+    background:#0f1e3d;color:#fff;padding:14px 18px;border-radius:10px;
+    font-family:'Courier New',monospace;font-size:15px;margin:12px 0;
+  }
+  /* Mobile */
+  .menu-toggle{display:none;background:none;border:none;font-size:22px;color:var(--navy)}
+  @media (max-width:992px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:translateX(0)}
+    .main{margin-left:0}
+    .menu-toggle{display:block}
+    .parking-grid{grid-template-columns:repeat(10,1fr)}
+    .batch-row{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:576px){
+    .content{padding:16px}
+    .topbar{padding:12px 16px}
+    .parking-grid{grid-template-columns:repeat(8,1fr);gap:4px}
+    .cell{font-size:8px}
+  }
+  .slot-detail{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:16px;
+  }
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .filter-chip{
+    padding:6px 14px;border-radius:20px;border:1px solid var(--border);
+    background:#fff;font-size:13px;cursor:pointer;font-weight:500;
+  }
+  .filter-chip.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><i class="bi bi-ev-front-fill"></i></div>
+      <div class="brand-text">
+        <h1>SmartPark AI</h1>
+        <small>Intelligent Parking Allocation</small>
+      </div>
+    </div>
+    <nav class="nav-menu">
+      <div class="nav-item active" data-page="dashboard"><i class="bi bi-grid-1x2-fill"></i>Dashboard</div>
+      <div class="nav-item" data-page="map"><i class="bi bi-pin-map-fill"></i>Live Parking Map</div>
+      <div class="nav-item" data-page="allocate"><i class="bi bi-plus-circle-fill"></i>Allocate Parking</div>
+      <div class="nav-item" data-page="batch"><i class="bi bi-layers-fill"></i>Batch Allocation</div>
+      <div class="nav-item" data-page="active"><i class="bi bi-car-front-fill"></i>Active Vehicles</div>
+      <div class="nav-item" data-page="history"><i class="bi bi-clock-history"></i>Parking History</div>
+      <div class="nav-item" data-page="insights"><i class="bi bi-cpu-fill"></i>AI Algorithm Insights</div>
+      <div class="nav-item" data-page="about"><i class="bi bi-info-circle-fill"></i>About Project</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div><i class="bi bi-shield-check"></i> College AI Micro Project</div>
+      <div style="margin-top:4px;opacity:.7">v1.0 · Flask + SQLite</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="bi bi-list"></i></button>
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <div class="sub" id="pageSub">Real-time parking analytics and operations</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+          <div class="live-dot"></div><span>System Live</span>
+        </div>
+        <span style="font-size:13px;color:var(--muted)" id="clock"></span>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="row g-3 mb-3">
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon blue"><i class="bi bi-square-fill"></i></div><div><div class="stat-label">Total Slots</div><div class="stat-value" id="st-total">0</div><div class="stat-delta">All parking spaces</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon green"><i class="bi bi-check-circle-fill"></i></div><div><div class="stat-label">Available</div><div class="stat-value" id="st-avail">0</div><div class="stat-delta">Ready for allocation</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon red"><i class="bi bi-x-circle-fill"></i></div><div><div class="stat-label">Occupied</div><div class="stat-value" id="st-occ">0</div><div class="stat-delta">Currently parked</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon orange"><i class="bi bi-pie-chart-fill"></i></div><div><div class="stat-label">Occupancy</div><div class="stat-value" id="st-pct">0%</div><div class="stat-delta">Utilization rate</div></div></div></div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon blue"><i class="bi bi-car-front-fill"></i></div><div><div class="stat-label">Active Vehicles</div><div class="stat-value" id="st-vehicles">0</div><div class="stat-delta">Currently parked</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon green"><i class="bi bi-ev-front-fill"></i></div><div><div class="stat-label">EV Charging</div><div class="stat-value" id="st-ev">0</div><div class="stat-delta">EV slots available</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon orange"><i class="bi bi-universal-access"></i></div><div><div class="stat-label">Accessible</div><div class="stat-value" id="st-acc">0</div><div class="stat-delta">Accessible slots available</div></div></div></div>
+          <div class="col-md-3 col-sm-6"><div class="card stat-card"><div class="stat-icon red"><i class="bi bi-arrow-counterclockwise"></i></div><div><div class="stat-label">Total Allocations</div><div class="stat-value" id="st-totalalloc">0</div><div class="stat-delta">All-time records</div></div></div></div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <div class="card p-3">
+              <div class="section-title"><i class="bi bi-bar-chart-fill"></i>Occupancy Overview</div>
+              <div style="height:280px"><canvas id="chartOccupancy"></canvas></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3">
+              <div class="section-title"><i class="bi bi-pie-chart-fill"></i>Vehicle Types</div>
+              <div style="height:280px"><canvas id="chartTypes"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <div class="card p-3">
+              <div class="section-title"><i class="bi bi-activity"></i>Recent Allocation Activity</div>
+              <div style="height:260px"><canvas id="chartActivity"></canvas></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3 h-100">
+              <div class="section-title"><i class="bi bi-lightning-fill"></i>Quick Actions</div>
+              <button class="btn btn-primary w-100 mb-2" onclick="navigate('allocate')"><i class="bi bi-plus-circle"></i> Allocate Vehicle</button>
+              <button class="btn btn-outline-danger w-100 mb-2" onclick="navigate('active')"><i class="bi bi-box-arrow-right"></i> Release Slot</button>
+              <button class="btn btn-outline-secondary w-100 mb-2" onclick="navigate('map')"><i class="bi bi-pin-map"></i> View Parking Map</button>
+              <button class="btn btn-outline-secondary w-100" onclick="navigate('batch')"><i class="bi bi-layers"></i> Batch Allocation</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE MAP -->
+      <div class="page" id="page-map">
+        <div class="parking-wrap">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <div class="section-title mb-0"><i class="bi bi-pin-map-fill"></i>Interactive Parking Layout</div>
+              <div style="font-size:13px;color:var(--muted)">Click any slot to view details. Path is computed using A* search.</div>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-outline-secondary" onclick="renderMap()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="confirmReset()"><i class="bi bi-trash"></i> Reset All</button>
+            </div>
+          </div>
+          <div class="filters">
+            <div class="filter-chip active" data-filter="all">All Slots</div>
+            <div class="filter-chip" data-filter="available">Available</div>
+            <div class="filter-chip" data-filter="occupied">Occupied</div>
+            <div class="filter-chip" data-filter="accessible">Accessible</div>
+            <div class="filter-chip" data-filter="ev">EV Charging</div>
+            <div class="filter-chip" data-filter="compact">Compact</div>
+            <div class="filter-chip" data-filter="large">Large</div>
+          </div>
+          <div class="parking-grid" id="parkingGrid"></div>
+          <div class="legend">
+            <span><i style="background:var(--green)"></i>Available</span>
+            <span><i style="background:var(--red)"></i>Occupied</span>
+            <span><i style="background:#7c3aed"></i>Accessible</span>
+            <span><i style="background:var(--orange)"></i>EV Charging</span>
+            <span><i style="background:var(--blue)"></i>Entrance</span>
+            <span><i style="background:#fbbf24"></i>A* Path</span>
+            <span><i style="background:#111827"></i>Door/Building</span>
+          </div>
+          <div id="slotDetail"></div>
+        </div>
+      </div>
+
+      <!-- ALLOCATE -->
+      <div class="page" id="page-allocate">
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <div class="card form-card">
+              <div class="section-title"><i class="bi bi-plus-circle-fill"></i>Allocate Parking Space</div>
+              <form id="allocForm">
+                <div class="mb-3">
+                  <label class="form-label">Vehicle Registration Number</label>
+                  <input type="text" class="form-control" id="regNumber" placeholder="e.g. MH12AB1234" required style="text-transform:uppercase">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Vehicle Type</label>
+                  <select class="form-select" id="vehicleType">
+                    <option value="motorcycle">Motorcycle</option>
+                    <option value="compact">Compact</option>
+                    <option value="sedan" selected>Sedan</option>
+                    <option value="suv">SUV</option>
+                    <option value="van">Van</option>
+                    <option value="truck">Truck</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="accessible">
+                    <label class="form-check-label" for="accessible">Accessible Parking Permit</label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="isEV">
+                    <label class="form-check-label" for="isEV">Electric Vehicle (needs charging)</label>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle"></i> Allocate Parking</button>
+              </form>
+            </div>
+          </div>
+          <div class="col-lg-7">
+            <div id="allocResult">
+              <div class="card p-5 text-center" style="color:var(--muted)">
+                <i class="bi bi-info-circle" style="font-size:48px"></i>
+                <h5 class="mt-3">Allocation Result</h5>
+                <p>Submit the form to allocate a parking space. The CSP solver will find the best slot and A* will compute the walking route.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BATCH -->
+      <div class="page" id="page-batch">
+        <div class="card form-card">
+          <div class="section-title"><i class="bi bi-layers-fill"></i>Batch Parking Allocation</div>
+          <p style="color:var(--muted);font-size:14px">Add multiple vehicles and allocate them in a single operation. Each vehicle is assigned a unique slot using CSP constraint solving.</p>
+          <div id="batchList"></div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-outline-secondary" onclick="addBatchRow()"><i class="bi bi-plus"></i> Add Vehicle</button>
+            <button class="btn btn-primary" onclick="runBatch()"><i class="bi bi-lightning"></i> Run Batch Allocation</button>
+          </div>
+          <div id="batchResults" class="mt-4"></div>
+        </div>
+      </div>
+
+      <!-- ACTIVE -->
+      <div class="page" id="page-active">
+        <div class="card form-card mb-3">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Release Vehicle</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="releaseReg" placeholder="Enter registration number" style="text-transform:uppercase">
+                <button class="btn btn-outline-danger" onclick="releaseVehicle()"><i class="bi bi-box-arrow-right"></i> Release</button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Search Active Vehicles</label>
+              <input type="text" class="form-control" id="activeSearch" placeholder="Search by registration or slot..." oninput="renderActive()">
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Registration</th><th>Vehicle Type</th><th>Slot</th><th>Entry Time</th><th>Walk Distance</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="activeBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="page" id="page-history">
+        <div class="card form-card mb-3">
+          <div class="row g-2">
+            <div class="col-md-6"><label class="form-label">Search History</label><input type="text" class="form-control" id="histSearch" placeholder="Search records..." oninput="renderHistory()"></div>
+            <div class="col-md-6 d-flex align-items-end"><button class="btn btn-outline-danger w-100" onclick="confirmReset()"><i class="bi bi-trash"></i> Reset All Records (Admin)</button></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Registration</th><th>Type</th><th>Slot</th><th>Entry</th><th>Exit</th><th>Walk Dist.</th><th>Status</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INSIGHTS -->
+      <div class="page" id="page-insights">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="card algo-card h-100">
+              <div class="section-title"><i class="bi bi-signpost-split-fill"></i>A* Search Algorithm</div>
+              <p>Used to compute the shortest walking path from the assigned parking slot to the building entrance through walkways.</p>
+              <div class="formula">f(n) = g(n) + h(n)</div>
+              <ul style="font-size:14px;color:var(--muted)">
+                <li><b>g(n)</b> — actual cost from start to node n (walked distance)</li>
+                <li><b>h(n)</b> — heuristic estimate from n to goal (Manhattan distance)</li>
+                <li><b>f(n)</b> — total estimated cost used for priority queue ordering</li>
+              </ul>
+              <p style="font-size:14px">The algorithm explores walkable cells (walkways, entrance, gate) and avoids walls and occupied slots. The resulting path is visualized on the Live Parking Map.</p>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card algo-card h-100">
+              <div class="section-title"><i class="bi bi-diagram-3-fill"></i>Constraint Satisfaction (CSP)</div>
+              <p>Vehicles are assigned to compatible parking slots by solving a CSP:</p>
+              <ul style="font-size:14px;color:var(--muted)">
+                <li><b>Variables:</b> vehicles requiring parking</li>
+                <li><b>Domains:</b> eligible parking slots based on vehicle type</li>
+                <li><b>Constraints:</b> slot size compatibility, accessibility, EV charging, unique assignment</li>
+              </ul>
+              <p style="font-size:14px">Backtracking with forward-checking prunes invalid domains early, ensuring no two vehicles share the same slot.</p>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="card algo-card">
+              <div class="section-title"><i class="bi bi-gear-fill"></i>Rule-Based Reasoning Engine</div>
+              <p>Translates vehicle attributes into parking requirements before CSP solving:</p>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <div class="p-3 bg-light rounded">
+                    <b><i class="bi bi-check2-all text-success"></i> Size Rules</b>
+                    <ul class="mb-0 mt-2" style="font-size:13px;color:var(--muted)">
+                      <li>Motorcycle / Compact → compact or larger slots</li>
+                      <li>Sedan → medium or large slots</li>
+                      <li>SUV / Van / Truck → large slots only</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="p-3 bg-light rounded">
+                    <b><i class="bi bi-shield-check text-primary"></i> Special Rules</b>
+                    <ul class="mb-0 mt-2" style="font-size:13px;color:var(--muted)">
+                      <li>Accessible permit → accessible slot required</li>
+                      <li>EV → EV charging slot required</li>
+                      <li>Non-EV → avoid EV slots when possible</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="workflow mt-3">
+                <div class="wf-step"><i class="bi bi-car-front"></i>Vehicle Input</div>
+                <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="wf-step"><i class="bi bi-gear"></i>Rule Engine</div>
+                <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="wf-step"><i class="bi bi-diagram-3"></i>CSP Solver</div>
+                <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="wf-step"><i class="bi bi-signpost-split"></i>A* Navigation</div>
+                <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div class="wf-step"><i class="bi bi-database"></i>SQLite Storage</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="card algo-card">
+              <div class="section-title"><i class="bi bi-clipboard-data"></i>Live Allocation Trace</div>
+              <div id="liveTrace" style="font-family:'Courier New',monospace;font-size:13px;background:#0f1e3d;color:#a7f3d0;padding:16px;border-radius:10px;max-height:300px;overflow-y:auto">
+                <div style="color:#94a3b8">// Perform an allocation to see the algorithm trace here...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div class="page" id="page-about">
+        <div class="card">
+          <div class="about-section">
+            <h4><i class="bi bi-info-circle text-primary"></i> Project Introduction</h4>
+            <p>SmartPark AI is an intelligent parking allocation and navigation system built as a college AI micro project. It demonstrates how classical AI techniques — A* search, Constraint Satisfaction Problems, and rule-based reasoning — can be combined to solve real-world parking management problems.</p>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-exclamation-triangle text-warning"></i> Problem Statement</h4>
+            <p>Urban parking lots suffer from congestion, inefficient space utilization, and driver frustration. Finding an available slot, especially one matching vehicle size or accessibility needs, wastes time and fuel. Existing systems often lack intelligent allocation and navigation.</p>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-bullseye text-success"></i> Objectives</h4>
+            <ul>
+              <li>Automate parking slot allocation based on vehicle type and needs</li>
+              <li>Enforce accessibility and EV charging constraints</li>
+              <li>Compute optimal walking paths using A* search</li>
+              <li>Provide a real-time dashboard and interactive parking map</li>
+              <li>Demonstrate AI algorithms in a practical, working application</li>
+            </ul>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-lightbulb text-warning"></i> Proposed Solution</h4>
+            <p>A web-based system where a rule engine interprets vehicle attributes, a CSP solver assigns compatible slots, and A* computes the walking route to the entrance. All data is persisted in SQLite and visualized through a modern responsive dashboard.</p>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-diagram-2 text-primary"></i> System Architecture</h4>
+            <div class="workflow">
+              <div class="wf-step"><i class="bi bi-browser"></i>Frontend (HTML/CSS/JS)</div>
+              <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+              <div class="wf-step"><i class="bi bi-server"></i>Flask REST API</div>
+              <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+              <div class="wf-step"><i class="bi bi-cpu"></i>AI Engines</div>
+              <div class="wf-arrow"><i class="bi bi-arrow-right"></i></div>
+              <div class="wf-step"><i class="bi bi-database"></i>SQLite DB</div>
+            </div>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-stack"></i> Technologies Used</h4>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge-soft badge-blue">Python 3</span>
+              <span class="badge-soft badge-blue">Flask</span>
+              <span class="badge-soft badge-blue">SQLite</span>
+              <span class="badge-soft badge-green">HTML5</span>
+              <span class="badge-soft badge-green">CSS3</span>
+              <span class="badge-soft badge-green">JavaScript</span>
+              <span class="badge-soft badge-orange">Bootstrap 5</span>
+              <span class="badge-soft badge-orange">Chart.js</span>
+              <span class="badge-soft badge-red">A* Algorithm</span>
+              <span class="badge-soft badge-red">CSP Solver</span>
+            </div>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-award text-success"></i> Advantages</h4>
+            <ul>
+              <li>Reduces driver search time through intelligent allocation</li>
+              <li>Respects accessibility and EV charging requirements</li>
+              <li>Provides optimal walking routes using A*</li>
+              <li>Real-time visualization of parking status</li>
+              <li>Scalable architecture for larger parking facilities</li>
+            </ul>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-exclamation-circle text-danger"></i> Limitations</h4>
+            <ul>
+              <li>Simulation-based — no real IoT sensors or cameras</li>
+              <li>Single parking lot (not multi-location)</li>
+              <li>No payment integration or user authentication</li>
+              <li>Static layout (not dynamically configurable)</li>
+            </ul>
+          </div>
+          <div class="about-section">
+            <h4><i class="bi bi-rocket-takeoff text-primary"></i> Future Scope</h4>
+            <ul>
+              <li>Integration with IoT sensors for real-time slot detection</li>
+              <li>Mobile app with turn-by-turn navigation</li>
+              <li>Machine learning for demand prediction</li>
+              <li>Multi-level and multi-lot support</li>
+              <li>Payment gateway and reservation system</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================
+   SmartPark AI — Frontend Application
+   Simulates Flask + SQLite backend behavior in-browser.
+   Implements: Rule Engine, CSP Solver, A* Search.
+   Data persists via localStorage.
+   ========================================================= */
+
+/* ---------- Parking Layout (mirrors Python layout.py) ---------- */
+// Legend: W=wall, K=walkway, E=entrance, G=gate, D=door,
+// Slot codes: C=compact, M=medium, L=large, A=accessible, V=EV
+const LAYOUT_ROWS = [
+  "WWWWWWWWWWWW",
+  "WDDDDDDDDDDW",
+  "WKKKKKKKKKKW",
+  "WAMLMMMLLVVW",
+  "WKKKKKKKKKKW",
+  "WMMMLLCCVVWW".slice(0,12),
+  "WKKKKKKKKKKW",
+  "WCCMMLLVVAWW".slice(0,12),
+  "WKKKKKKKKKKW",
+  "WLLMMCCVVVAW",
+  "WKKKKKKKKKKW",
+  "WWWWGGGGWWWW",
+  "WWWWE EWWWWW".slice(0,12),
+];
+
+// Rebuild a cleaner 12-col layout
+const GRID = [
+  "WWWWWWWWWWWW".split(""),
+  "WDDDDDDDDDDW".split(""),
+  "WKKKKKKKKKKW".split(""),
+  "WALMMLMMVVWW".slice(0,12).split(""),
+  "WKKKKKKKKKKW".split(""),
+  "WMMLLCVVMMWW".slice(0,12).split(""),
+  "WKKKKKKKKKKW".split(""),
+  "WCCMMLLVVAWW".slice(0,12).split(""),
+  "WKKKKKKKKKKW".split(""),
+  "WLLMMCCVVVAW".split(""),
+  "WKKKKKKKKKKW".split(""),
+  "WWWWGGGGWWWW".split(""),
+  "WWWWKEEKWWWW".split(""),
+];
+
+// Parse into cells
+let cells = []; // flat list of {r,c,type,id,slotType}
+let slotMap = {}; // id -> slot data
+let slotCounter = 1;
+const DOOR_POS = {r:1,c:6}; // building door (target for A*)
+const ENTRANCE_POS = {r:12,c:5};
+
+for(let r=0;r<GRID.length;r++){
+  for(let c=0;c<GRID[r].length;c++){
+    const ch = GRID[r][c];
+    let type='wall', slotType=null, id=null;
+    if(ch==='K'){type='walkway'}
+    else if(ch==='D'){type='door'}
+    else if(ch==='E'){type='entrance'}
+    else if(ch==='G'){type='gate'}
+    else if(ch==='W'){type='wall'}
+    else if('CMLAV'.includes(ch)){
+      type='slot';
+      const map={C:'compact',M:'medium',L:'large',A:'accessible',V:'ev'};
+      slotType=map[ch];
+      id = (slotType[0].toUpperCase()) + String(slotCounter++).padStart(2,'0');
+    }
+    cells.push({r,c,type,slotType,id});
+    if(id){
+      slotMap[id]={
+        id, row:r, col:c, slotType,
+        status:'available',
+        vehicle:null
+      };
+    }
+  }
+}
+
+/* ---------- Persistence ---------- */
+const STORE_KEY='smartpark_ai_v1';
+let state = {
+  slots: slotMap,
+  allocations: [], // all records (active + history)
+  trace: []
+};
+
+function saveState(){
+  localStorage.setItem(STORE_KEY, JSON.stringify({
+    slots: state.slots,
+    allocations: state.allocations,
+    trace: state.trace.slice(-50)
+  }));
+}
+function loadState(){
+  const raw = localStorage.getItem(STORE_KEY);
+  if(!raw) return;
+  try{
+    const d = JSON.parse(raw);
+    // merge slots (keep layout, update status)
+    for(const id in d.slots){
+      if(state.slots[id]){
+        state.slots[id].status = d.slots[id].status;
+        state.slots[id].vehicle = d.slots[id].vehicle;
+      }
+    }
+    state.allocations = d.allocations || [];
+    state.trace = d.trace || [];
+  }catch(e){console.error(e)}
+}
+
+/* ---------- Rule Engine ---------- */
+const RULES = {
+  motorcycle: {sizes:['compact','medium','large'], label:'Motorcycle → compact/medium/large'},
+  compact:    {sizes:['compact','medium','large'], label:'Compact → compact/medium/large'},
+  sedan:      {sizes:['medium','large'],           label:'Sedan → medium/large'},
+  suv:        {sizes:['large'],                    label:'SUV → large only'},
+  van:        {sizes:['large'],                    label:'Van → large only'},
+  truck:      {sizes:['large'],                    label:'Truck → large only'}
+};
+
+function applyRules(vehicle){
+  const rules = [];
+  const base = RULES[vehicle.type] || RULES.sedan;
+  rules.push(base.label);
+  let allowedSizes = [...base.sizes];
+  let requireAccessible = !!vehicle.accessible;
+  let requireEV = !!vehicle.isEV;
+  if(requireAccessible) rules.push('Accessible permit → accessible slot required');
+  if(requireEV) rules.push('EV → EV charging slot required');
+  if(!requireEV) rules.push('Non-EV → avoid EV slots when feasible');
+  return {allowedSizes, requireAccessible, requireEV, rules};
+}
+
+/* ---------- CSP Solver ---------- */
+function getEligibleSlots(vehicle, takenIds){
+  const {allowedSizes, requireAccessible, requireEV} = applyRules(vehicle);
+  const eligible = [];
+  for(const id in state.slots){
+    const s = state.slots[id];
+    if(s.status!=='available') continue;
+    if(takenIds.has(id)) continue;
+    // size
+    if(!allowedSizes.includes(s.slotType)) continue;
+    // accessible
+    if(requireAccessible && s.slotType!=='accessible') continue;
+    // EV
+    if(requireEV && s.slotType!=='ev') continue;
+    eligible.push(s);
+  }
+  // Non-EV: deprioritize EV slots
+  if(!requireEV){
+    eligible.sort((a,b)=>{
+      const aPen = a.slotType==='ev'?1:0;
+      const bPen = b.slotType==='ev'?1:0;
+      return aPen-bPen;
+    });
+  }
+  return eligible;
+}
+
+function cspAllocate(vehicles){
+  // Backtracking solver for batch
+  const results = [];
+  const taken = new Set();
+  function solve(idx){
+    if(idx>=vehicles.length) return true;
+    const v = vehicles[idx];
+    const elig = getEligibleSlots(v, taken);
+    // MRV: already sorted; pick first available
+    for(const s of elig){
+      taken.add(s.id);
+      results[idx] = {vehicle:v, slot:s};
+      if(solve(idx+1)) return true;
+      taken.delete(s.id);
+    }
+    results[idx] = {vehicle:v, slot:null, reason:'No compatible slot available'};
+    return false;
+  }
+  solve(0);
+  return results;
+}
+
+/* ---------- A* Search ---------- */
+function isWalkable(r,c){
+  if(r<0||c<0||r>=GRID.length||c>=GRID[0].length) return false;
+  const cell = cells.find(x=>x.r===r&&x.c===c);
+  if(!cell) return false;
+  if(cell.type==='wall') return false;
+  if(cell.type==='slot'){
+    const s = state.slots[cell.id];
+    if(s && s.status==='occupied') return false;
+  }
+  return true;
+}
+
+function astar(startR,startC, goalR,goalC){
+  const key=(r,c)=>r+','+c;
+  const open=[{r:startR,c:startC,g:0,h:0,f:0}];
+  const came={};
+  const gScore={[key(startR,startC)]:0};
+  const closed=new Set();
+  const heur=(r,c)=>Math.abs(r-goalR)+Math.abs(c-goalC);
+  open[0].h=heur(startR,startC);open[0].f=open[0].h;
+  while(open.length){
+    open.sort((a,b)=>a.f-b.f);
+    const cur=open.shift();
+    if(cur.r===goalR&&cur.c===goalC){
+      const path=[];let k=key(cur.r,cur.c);
+      while(k){const[r,c]=k.split(',').map(Number);path.unshift({r,c});k=came[k]}
+      return path;
+    }
+    closed.add(key(cur.r,cur.c));
+    const neigh=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(const[dr,dc] of neigh){
+      const nr=cur.r+dr, nc=cur.c+dc;
+      if(!isWalkable(nr,nc)) continue;
+      const nk=key(nr,nc);
+      if(closed.has(nk)) continue;
+      const tg=cur.g+1;
+      if(tg < (gScore[nk]??Infinity)){
+        came[nk]=key(cur.r,cur.c);
+        gScore[nk]=tg;
+        const h=heur(nr,nc);
+        open.push({r:nr,c:nc,g:tg,h,f:tg+h});
+      }
+    }
+  }
+  return null;
+}
+
+/* ---------- Allocation API ---------- */
+function allocateSingle(vehicle){
+  const trace=[];
+  trace.push(`[Rule Engine] Vehicle: ${vehicle.reg} (${vehicle.type})`);
+  const ruleResult = applyRules(vehicle);
+  ruleResult.rules.forEach(r=>trace.push(`  → ${r}`));
+  // check duplicate
+  if(state.allocations.some(a=>a.reg===vehicle.reg && !a.exitTime)){
+    return {success:false, reason:'Vehicle already parked (duplicate active registration)', trace};
+  }
+  const elig = getEligibleSlots(vehicle, new Set());
+  trace.push(`[CSP] Eligible slots: ${elig.length}`);
+  if(!elig.length){
+    return {success:false, reason:'No compatible slot available for this vehicle', trace};
+  }
+  const slot = elig[0];
+  trace.push(`[CSP] Assigned slot: ${slot.id} (${slot.slotType})`);
+  // A* from slot to door
+  const path = astar(slot.row, slot.col, DOOR_POS.r, DOOR_POS.c);
+  const distance = path? path.length-1 : 0;
+  trace.push(`[A*] Path computed: ${distance} steps to entrance`);
+  // commit
+  slot.status='occupied';
+  slot.vehicle={reg:vehicle.reg, type:vehicle.type, accessible:vehicle.accessible, isEV:vehicle.isEV};
+  const rec={
+    id:Date.now(),
+    reg:vehicle.reg,
+    type:vehicle.type,
+    accessible:vehicle.accessible,
+    isEV:vehicle.isEV,
+    slotId:slot.id,
+    slotType:slot.slotType,
+    entryTime:new Date().toISOString(),
+    exitTime:null,
+    walkDistance:distance,
+    path:path?path.map(p=>`${p.r},${p.c}`):[],
+    status:'active',
+    rulesApplied:ruleResult.rules
+  };
+  state.allocations.push(rec);
+  state.trace = trace;
+  saveState();
+  return {success:true, allocation:rec, path, trace};
+}
+
+function releaseByReg(reg){
+  reg = reg.trim().toUpperCase();
+  const rec = state.allocations.find(a=>a.reg===reg && !a.exitTime);
+  if(!rec) return {success:false, reason:'Vehicle not currently parked'};
+  const slot = state.slots[rec.slotId];
+  if(slot){slot.status='available';slot.vehicle=null}
+  rec.exitTime=new Date().toISOString();
+  rec.status='completed';
+  saveState();
+  return {success:true, allocation:rec};
+}
+
+/* ---------- UI: Navigation ---------- */
+const pageTitles={
+  dashboard:['Dashboard','Real-time parking analytics and operations'],
+  map:['Live Parking Map','Interactive parking layout with A* path visualization'],
+  allocate:['Allocate Parking','Assign a single vehicle to a compatible slot'],
+  batch:['Batch Allocation','Allocate multiple vehicles in one operation'],
+  active:['Active Vehicles','Currently parked vehicles and release operations'],
+  history:['Parking History','Complete log of all allocation records'],
+  insights:['AI Algorithm Insights','A*, CSP, and Rule-Based Reasoning explained'],
+  about:['About Project','SmartPark AI — college AI micro project']
+};
+function navigate(page){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+page));
+  const t=pageTitles[page]||['',''];
+  document.getElementById('pageTitle').textContent=t[0];
+  document.getElementById('pageSub').textContent=t[1];
+  if(page==='dashboard') renderDashboard();
+  if(page==='map') renderMap();
+  if(page==='active') renderActive();
+  if(page==='history') renderHistory();
+  if(page==='batch') renderBatch();
+  if(page==='insights') renderTrace();
+  document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
+
+/* ---------- Toast ---------- */
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className='toast-msg '+type;
+  el.innerHTML=`<i class="bi bi-${type==='success'?'check-circle':type==='error'?'x-circle':type==='warn'?'exclamation-triangle':'info-circle'}"></i> ${msg}`;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(120%)';el.style.transition='.3s';setTimeout(()=>el.remove(),300)},3200);
+}
+
+/* ---------- Dashboard ---------- */
+let charts={};
+function renderDashboard(){
+  const slots=Object.values(state.slots);
+  const total=slots.length;
+  const occ=slots.filter(s=>s.status==='occupied').length;
+  const avail=total-occ;
+  const pct=total?Math.round(occ/total*100):0;
+  const active=state.allocations.filter(a=>!a.exitTime).length;
+  const evAvail=slots.filter(s=>s.slotType==='ev'&&s.status==='available').length;
+  const accAvail=slots.filter(s=>s.slotType==='accessible'&&s.status==='available').length;
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-avail').textContent=avail;
+  document.getElementById('st-occ').textContent=occ;
+  document.getElementById('st-pct').textContent=pct+'%';
+  document.getElementById('st-vehicles').textContent=active;
+  document.getElementById('st-ev').textContent=evAvail;
+  document.getElementById('st-acc').textContent=accAvail;
+  document.getElementById('st-totalalloc').textContent=state.allocations.length;
+
+  // Occupancy chart
+  if(charts.occ) charts.occ.destroy();
+  charts.occ=new Chart(document.getElementById('chartOccupancy'),{
+    type:'bar',
+    data:{labels:['Total','Available','Occupied'],datasets:[{label:'Slots',data:[total,avail,occ],backgroundColor:['#2d7ff9','#16a34a','#dc2626'],borderRadius:8}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:5}}}}
+  });
+  // Vehicle types
+  const types={};
+  state.allocations.filter(a=>!a.exitTime).forEach(a=>types[a.type]=(types[a.type]||0)+1);
+  if(charts.types) charts.types.destroy();
+  charts.types=new Chart(document.getElementById('chartTypes'),{
+    type:'doughnut',
+    data:{labels:Object.keys(types).length?Object.keys(types):['No vehicles'],datasets:[{data:Object.keys(types).length?Object.values(types):[1],backgroundColor:['#2d7ff9','#16a34a','#f59e0b','#dc2626','#7c3aed','#06b6d4']}]},
+    options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+  // Activity (last 10 allocations by time)
+  const recent=state.allocations.slice(-10);
+  if(charts.act) charts.act.destroy();
+  charts.act=new Chart(document.getElementById('chartActivity'),{
+    type:'line',
+    data:{labels:recent.map((_,i)=>'#'+(i+1)),datasets:[{label:'Allocations',data:recent.map((_,i)=>i+1),borderColor:'#2d7ff9',backgroundColor:'rgba(45,127,249,.15)',fill:true,tension:.35}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+}
+
+/* ---------- Map ---------- */
+let currentFilter='all';
+let highlightedPath=[];
+let highlightedSlot=null;
+
+document.querySelectorAll('.filter-chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    currentFilter=c.dataset.filter;
+    renderMap();
+  });
+});
+
+function renderMap(){
+  const grid=document.getElementById('parkingGrid');
+  grid.innerHTML='';
+  cells.forEach(cell=>{
+    const d=document.createElement('div');
+    d.className='cell '+cell.type;
+    if(cell.type==='slot'){
+      const s=state.slots[cell.id];
+      d.classList.add(s.status);
+      if(s.slotType==='accessible' && s.status==='available') d.classList.add('accessible');
+      if(s.slotType==='ev' && s.status==='available') d.classList.add('ev');
+      d.innerHTML=`<div class="slot-label">${cell.id}</div>`;
+      d.title=`Slot ${cell.id} (${s.slotType}) — ${s.status}${s.vehicle?' — '+s.vehicle.reg:''}`;
+      d.addEventListener('click',()=>showSlotDetail(cell.id));
+      // filter
+      let show=true;
+      if(currentFilter==='available' && s.status!=='available') show=false;
+      if(currentFilter==='occupied' && s.status!=='occupied') show=false;
+      if(currentFilter==='accessible' && s.slotType!=='accessible') show=false;
+      if(currentFilter==='ev' && s.slotType!=='ev') show=false;
+      if(currentFilter==='compact' && s.slotType!=='compact') show=false;
+      if(currentFilter==='large' && s.slotType!=='large') show=false;
+      if(!show) d.style.opacity='.2';
+    }
+    // path highlight
+    if(highlightedPath.some(p=>p.r===cell.r&&p.c===cell.c)) d.classList.add('path');
+    if(highlightedSlot && cell.id===highlightedSlot) d.classList.add('allocated');
+    grid.appendChild(d);
+  });
+}
+
+function showSlotDetail(id){
+  const s=state.slots[id];
+  const path = astar(s.row,s.col,DOOR_POS.r,DOOR_POS.c);
+  const dist = path?path.length-1:0;
+  const el=document.getElementById('slotDetail');
+  el.innerHTML=`
+    <div class="slot-detail">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1"><i class="bi bi-pentagon-fill text-primary"></i> Slot ${s.id}</h5>
+          <div style="color:var(--muted);font-size:13px">Type: <b>${s.slotType}</b> · Status: <span class="badge-soft ${s.status==='available'?'badge-green':'badge-red'}">${s.status}</span></div>
+        </div>
+        <div style="font-size:13px;color:var(--muted)">Walking distance to entrance: <b class="text-dark">${dist} steps</b></div>
+      </div>
+      ${s.vehicle?`<div class="mt-3 p-3 bg-light rounded"><b>Parked Vehicle:</b> ${s.vehicle.reg} (${s.vehicle.type})${s.vehicle.accessible?' · ♿ Accessible':''}${s.vehicle.isEV?' · ⚡ EV':''}</div>`:''}
+      <div class="mt-3"><button class="btn btn-sm btn-outline-primary" onclick="highlightPathFrom('${id}')"><i class="bi bi-signpost-split"></i> Show A* Path</button></div>
+    </div>`;
+}
+function highlightPathFrom(id){
+  const s=state.slots[id];
+  const path=astar(s.row,s.col,DOOR_POS.r,DOOR_POS.c);
+  highlightedPath=path||[];
+  highlightedSlot=id;
+  renderMap();
+}
+
+/* ---------- Allocation Form ---------- */
+document.getElementById('allocForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const vehicle={
+    reg:document.getElementById('regNumber').value.trim().toUpperCase(),
+    type:document.getElementById('vehicleType').value,
+    accessible:document.getElementById('accessible').checked,
+    isEV:document.getElementById('isEV').checked
+  };
+  if(!vehicle.reg){toast('Enter registration number','error');return}
+  if(!/^[A-Z0-9]{4,12}$/.test(vehicle.reg)){toast('Invalid registration format','error');return}
+  const result = allocateSingle(vehicle);
+  const box=document.getElementById('allocResult');
+  if(result.success){
+    const a=result.allocation;
+    box.innerHTML=`
+      <div class="result-card">
+        <h5 class="mb-3"><i class="bi bi-check-circle-fill text-success"></i> Allocation Successful</h5>
+        <div class="result-row"><span>Registration</span><b>${a.reg}</b></div>
+        <div class="result-row"><span>Vehicle Type</span><b>${a.type}</b></div>
+        <div class="result-row"><span>Assigned Slot</span><b>${a.slotId} (${a.slotType})</b></div>
+        <div class="result-row"><span>Walking Distance</span><b>${a.walkDistance} steps</b></div>
+        <div class="result-row"><span>Entry Time</span><b>${new Date(a.entryTime).toLocaleString()}</b></div>
+        <div class="result-row"><span>Status</span><b class="badge-soft badge-green">Active</b></div>
+        <div class="mt-3"><b style="font-size:13px">Applied Rules:</b>
+          <ul class="mb-0 mt-1" style="font-size:13px;color:var(--muted)">${a.rulesApplied.map(r=>'<li>'+r+'</li>').join('')}</ul>
+        </div>
+        <div class="mt-3"><b style="font-size:13px">Navigation Path:</b>
+          <div style="font-family:monospace;font-size:12px;color:var(--muted);word-break:break-all">${result.path.map(p=>`(${p.r},${p.c})`).join(' → ')}</div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-sm btn-primary" onclick="navigate('map');highlightPathFrom('${a.slotId}')"><i class="bi bi-pin-map"></i> View on Map</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('allocForm').reset();document.getElementById('allocResult').innerHTML=defaultResultHTML()">New Allocation</button>
+        </div>
+      </div>`;
+    toast(`Allocated ${a.reg} to slot ${a.slotId}`,'success');
+    highlightedPath=result.path||[];
+    highlightedSlot=a.slotId;
+  } else {
+    box.innerHTML=`
+      <div class="result-card fail">
+        <h5 class="mb-3"><i class="bi bi-x-circle-fill text-danger"></i> Allocation Failed</h5>
+        <p style="color:var(--muted)">${result.reason}</p>
+        <div class="mt-3"><b style="font-size:13px">Trace:</b>
+          <div style="font-family:monospace;font-size:12px;background:#0f1e3d;color:#a7f3d0;padding:12px;border-radius:8px;max-height:200px;overflow-y:auto">
+            ${result.trace.map(t=>'<div>'+t+'</div>').join('')}
+          </div>
+        </div>
+      </div>`;
+    toast(result.reason,'error');
+  }
+  renderDashboard();
+  renderMap();
+});
+function defaultResultHTML(){
+  return `<div class="card p-5 text-center" style="color:var(--muted)">
+    <i class="bi bi-info-circle" style="font-size:48px"></i>
+    <h5 class="mt-3">Allocation Result</h5>
+    <p>Submit the form to allocate a parking space. The CSP solver will find the best slot and A* will compute the walking route.</p>
+  </div>`;
+}
+
+/* ---------- Batch ---------- */
+let batchRows=[];
+function addBatchRow(){
+  const idx=batchRows.length;
+  batchRows.push(idx);
+  renderBatch();
+}
+function removeBatchRow(idx){
+  batchRows=batchRows.filter(i=>i!==idx);
+  renderBatch();
+}
+function renderBatch(){
+  const list=document.getElementById('batchList');
+  if(!batchRows.length){
+    list.innerHTML=`<div class="p-3 text-center" style="color:var(--muted);background:#f9fafb;border-radius:10px"><i class="bi bi-inbox"></i> No vehicles added. Click "Add Vehicle" to begin.</div>`;
+    return;
+  }
+  list.innerHTML=batchRows.map(idx=>`
+    <div class="batch-row" data-idx="${idx}">
+      <div><label class="form-label mb-1">Registration</label><input type="text" class="form-control form-control-sm batch-reg" style="text-transform:uppercase" placeholder="MH12AB1234"></div>
+      <div><label class="form-label mb-1">Type</label><select class="form-select form-select-sm batch-type">
+        <option value="motorcycle">Motorcycle</option><option value="compact">Compact</option>
+        <option value="sedan" selected>Sedan</option><option value="suv">SUV</option>
+        <option value="van">Van</option><option value="truck">Truck</option>
+      </select></div>
+      <div><label class="form-label mb-1">Accessible</label><select class="form-select form-select-sm batch-acc"><option value="0">No</option><option value="1">Yes</option></select></div>
+      <div><label class="form-label mb-1">EV</label><select class="form-select form-select-sm batch-ev"><option value="0">No</option><option value="1">Yes</option></select></div>
+      <div><button class="btn btn-sm btn-outline-danger" onclick="removeBatchRow(${idx})"><i class="bi bi-trash"></i></button></div>
+    </div>`).join('');
+}
+function runBatch(){
+  if(!batchRows.length){toast('Add at least one vehicle','warn');return}
+  const vehicles=[];
+  document.querySelectorAll('.batch-row').forEach(row=>{
+    const reg=row.querySelector('.batch-reg').value.trim().toUpperCase();
+    const type=row.querySelector('.batch-type').value;
+    const accessible=row.querySelector('.batch-acc').value==='1';
+    const isEV=row.querySelector('.batch-ev').value==='1';
+    if(reg) vehicles.push({reg,type,accessible,isEV});
+  });
+  if(!vehicles.length){toast('Enter at least one registration','warn');return}
+  // validate duplicates in batch
+  const seen=new Set();
+  for(const v of vehicles){
+    if(seen.has(v.reg)){toast(`Duplicate in batch: ${v.reg}`,'warn');return}
+    seen.add(v.reg);
+  }
+  const results=cspAllocate(vehicles);
+  // commit successful ones
+  let successCount=0, failCount=0;
+  const html=results.map(r=>{
+    if(r.slot){
+      // commit
+      const res=allocateSingle(r.vehicle);
+      if(res.success){successCount++;
+        return `<div class="p-3 bg-light rounded mb-2"><i class="bi bi-check-circle-fill text-success"></i> <b>${r.vehicle.reg}</b> → Slot <b>${r.slot.id}</b> (${r.slot.slotType}) · ${res.allocation.walkDistance} steps</div>`;
+      }
+      failCount++;
+      return `<div class="p-3 bg-light rounded mb-2"><i class="bi bi-x-circle-fill text-danger"></i> <b>${r.vehicle.reg}</b> — ${res.reason}</div>`;
+    }
+    failCount++;
+    return `<div class="p-3 bg-light rounded mb-2"><i class="bi bi-x-circle-fill text-danger"></i> <b>${r.vehicle.reg}</b> — ${r.reason}</div>`;
+  }).join('');
+  document.getElementById('batchResults').innerHTML=`
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Batch complete: <b>${successCount}</b> succeeded, <b>${failCount}</b> failed</div>
+    ${html}`;
+  toast(`Batch: ${successCount} allocated, ${failCount} failed`, successCount?'success':'warn');
+  renderDashboard();
+  renderMap();
+}
+
+/* ---------- Active Vehicles ---------- */
+function renderActive(){
+  const q=(document.getElementById('activeSearch').value||'').toLowerCase();
+  const active=state.allocations.filter(a=>!a.exitTime);
+  const body=document.getElementById('activeBody');
+  const filtered=active.filter(a=>!q||a.reg.toLowerCase().includes(q)||a.slotId.toLowerCase().includes(q));
+  if(!filtered.length){
+    body.innerHTML=`<tr><td colspan="7" class="text-center py-4" style="color:var(--muted)"><i class="bi bi-inbox"></i> No active vehicles</td></tr>`;
+    return;
+  }
+  body.innerHTML=filtered.map(a=>`
+    <tr>
+      <td><b>${a.reg}</b>${a.accessible?' <span class="badge-soft badge-blue">♿</span>':''}${a.isEV?' <span class="badge-soft badge-orange">⚡</span>':''}</td>
+      <td>${a.type}</td>
+      <td><span class="badge-soft badge-blue">${a.slotId}</span></td>
+      <td>${new Date(a.entryTime).toLocaleString()}</td>
+      <td>${a.walkDistance} steps</td>
+      <td><span class="badge-soft badge-green">Parked</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="navigate('map');highlightPathFrom('${a.slotId}')"><i class="bi bi-pin-map"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="confirmRelease('${a.reg}')"><i class="bi bi-box-arrow-right"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function confirmRelease(reg){
+  if(confirm(`Release vehicle ${reg}?`)){
+    const r=releaseByReg(reg);
+    if(r.success){toast(`${reg} released successfully`,'success');renderActive();renderDashboard();renderMap()}
+    else toast(r.reason,'error');
+  }
+}
+function releaseVehicle(){
+  const reg=document.getElementById('releaseReg').value.trim().toUpperCase();
+  if(!reg){toast('Enter registration number','warn');return}
+  confirmRelease(reg);
+  document.getElementById('releaseReg').value='';
+}
+
+/* ---------- History ---------- */
+function renderHistory(){
+  const q=(document.getElementById('histSearch').value||'').toLowerCase();
+  const all=[...state.allocations].reverse();
+  const filtered=all.filter(a=>!q||a.reg.toLowerCase().includes(q)||a.slotId.toLowerCase().includes(q));
+  const body=document.getElementById('historyBody');
+  if(!filtered.length){
+    body.innerHTML=`<tr><td colspan="7" class="text-center py-4" style="color:var(--muted)"><i class="bi bi-inbox"></i> No records</td></tr>`;
+    return;
+  }
+  body.innerHTML=filtered.map(a=>`
+    <tr>
+      <td><b>${a.reg}</b></td>
+      <td>${a.type}</td>
+      <td><span class="badge-soft badge-blue">${a.slotId}</span></td>
+      <td>${new Date(a.entryTime).toLocaleString()}</td>
+      <td>${a.exitTime?new Date(a.exitTime).toLocaleString():'—'}</td>
+      <td>${a.walkDistance} steps</td>
+      <td><span class="badge-soft ${a.exitTime?'badge-orange':'badge-green'}">${a.exitTime?'Completed':'Active'}</span></td>
+    </tr>`).join('');
+}
+
+/* ---------- Reset ---------- */
+function confirmReset(){
+  if(confirm('⚠️ ADMIN ACTION: Reset all parking data? This clears all allocations and releases all slots. This cannot be undone.')){
+    for(const id in state.slots){state.slots[id].status='available';state.slots[id].vehicle=null}
+    state.allocations=[];
+    state.trace=[];
+    saveState();
+    toast('All data reset','info');
+    renderDashboard();renderMap();renderActive();renderHistory();
+  }
+}
+
+/* ---------- Trace ---------- */
+function renderTrace(){
+  const el=document.getElementById('liveTrace');
+  if(!state.trace.length){
+    el.innerHTML='<div style="color:#94a3b8">// Perform an allocation to see the algorithm trace here...</div>';
+    return;
+  }
+  el.innerHTML=state.trace.map(t=>'<div>'+t+'</div>').join('');
+}
+
+/* ---------- Clock ---------- */
+function updateClock(){
+  const d=new Date();
+  document.getElementById('clock').textContent=d.toLocaleString();
+}
+setInterval(updateClock,1000);
+
+/* ---------- Init ---------- */
+loadState();
+renderDashboard();
+renderMap();
+renderBatch();
+renderActive();
+renderHistory();
+updateClock();
+</script>
+</body>
+</html>
